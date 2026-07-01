@@ -3715,6 +3715,23 @@ extern "C" int ds4_gpu_set_model_map(const void *model_map, uint64_t model_size)
     g_model_host_base = model_map;
     g_model_device_base = (const char *)model_map;
     g_model_registered_size = model_size;
+    if (getenv("DS4_CUDA_STREAM_FROM_RAM") != NULL) {
+        unsigned int flags = cudaHostRegisterMapped | cudaHostRegisterReadOnly;
+        if (getenv("DS4_CUDA_HOST_REGISTER_PLAIN") != NULL) {
+            flags = cudaHostRegisterMapped;
+        }
+        cudaError_t err = cudaHostRegister((void *)model_map, (size_t)model_size, flags);
+        if (err == cudaSuccess) {
+            g_model_registered = 1;
+            fprintf(stderr, "ds4: CUDA pinned %.2f GiB model mapping for direct RAM streaming\n",
+                    (double)model_size / 1073741824.0);
+        } else {
+            fprintf(stderr, "ds4: WARNING: CUDA failed to pin model mapping: %s. "
+                    "RAM streaming will use slower pageable copies. (Check 'ulimit -l')\n",
+                    cudaGetErrorString(err));
+            (void)cudaGetLastError();
+        }
+    }
     g_model_range_mapping_supported = 1;
     g_model_hmm_direct = 0;
     g_model_cache_full = 0;
@@ -4311,6 +4328,17 @@ extern "C" int ds4_gpu_lookup_cache_strict(uint64_t source_offset,
 }
 
 extern "C" int ds4_gpu_set_model_fd(int fd) {
+    if (getenv("DS4_CUDA_STREAM_FROM_RAM") != NULL) {
+        g_model_fd = -1;
+        g_model_fd_host_base = NULL;
+        g_model_file_size = 0;
+        if (g_model_direct_fd >= 0) {
+            (void)close(g_model_direct_fd);
+            g_model_direct_fd = -1;
+        }
+        g_model_direct_align = 1;
+        return 1;
+    }
     g_model_fd = fd;
     g_model_fd_host_base = g_model_host_base;
     g_model_file_size = 0;
