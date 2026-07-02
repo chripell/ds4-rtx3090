@@ -2454,7 +2454,17 @@ static void model_open(ds4_model *m, const char *path, bool metal_mapping,
     memset(m, 0, sizeof(*m));
     m->fd = -1;
 
-    int fd = open(path, O_RDONLY);
+    int fd = -1;
+    bool writeable = false;
+#ifndef __APPLE__
+    fd = open(path, O_RDWR);
+    if (fd != -1) {
+        writeable = true;
+    }
+#endif
+    if (fd == -1) {
+        fd = open(path, O_RDONLY);
+    }
     if (fd == -1) ds4_die_errno("cannot open model", path);
 
     struct stat st;
@@ -2473,8 +2483,14 @@ static void model_open(ds4_model *m, const char *path, bool metal_mapping,
      * normal user-space failure. Keeping CPU inference off the shared mapping
      * avoids that VM accounting path while preserving normal file-backed reads.
      */
+#ifdef __APPLE__
     const int mmap_flags = metal_mapping ? MAP_SHARED : MAP_PRIVATE;
-    void *map = mmap(NULL, (size_t)st.st_size, PROT_READ, mmap_flags, fd, 0);
+    int prot = PROT_READ;
+#else
+    const int mmap_flags = MAP_SHARED;
+    int prot = PROT_READ | (writeable ? PROT_WRITE : 0);
+#endif
+    void *map = mmap(NULL, (size_t)st.st_size, prot, mmap_flags, fd, 0);
     if (map == MAP_FAILED) ds4_die_errno("cannot mmap model", path);
 
     m->fd = fd;

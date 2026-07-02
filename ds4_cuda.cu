@@ -3716,10 +3716,7 @@ extern "C" int ds4_gpu_set_model_map(const void *model_map, uint64_t model_size)
     g_model_device_base = (const char *)model_map;
     g_model_registered_size = model_size;
     if (getenv("DS4_CUDA_STREAM_FROM_RAM") != NULL) {
-        unsigned int flags = cudaHostRegisterMapped | cudaHostRegisterReadOnly;
-        if (getenv("DS4_CUDA_HOST_REGISTER_PLAIN") != NULL) {
-            flags = cudaHostRegisterMapped;
-        }
+        unsigned int flags = cudaHostRegisterMapped;
         cudaError_t err = cudaHostRegister((void *)model_map, (size_t)model_size, flags);
         if (err == cudaSuccess) {
             g_model_registered = 1;
