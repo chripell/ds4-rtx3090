@@ -22,7 +22,7 @@ Set these environment variables in your shell before running `ds4` or `ds4-bench
 ```bash
 export CUDA_VISIBLE_DEVICES=0
 export DS4_ANON_MMAP=1
-export DS4_MTP_SPEC_DISABLE=1
+# export DS4_MTP_SPEC_DISABLE=1
 export DS4_CUDA_STREAM_FROM_RAM=1
 export DS4_CUDA_WEIGHT_ARENA_CHUNK_MB=256
 export DS4_CUDA_Q8_F16_CACHE_RESERVE_MB=512
@@ -32,7 +32,7 @@ export DS4_CUDA_NO_WINDOW_ATTENTION=1
 
 ### What these flags do:
 * **`DS4_ANON_MMAP=1`**: Loads the 80GB model into anonymous memory at startup to bypass Linux kernel `cudaHostRegister` pinning restrictions on file-backed mappings.
-* **`DS4_MTP_SPEC_DISABLE=1`**: Disables Speculative Decoding/MTP batching. This restores full single-token throughput on single-GPU systems.
+* **`DS4_MTP_SPEC_DISABLE=1`**: Disables Speculative Decoding/MTP batching. *(Note: This generally does not significantly change results unless you are using greedy decoding (`-temp 0`), because speculative decoding is automatically disabled by the engine when using default probabilistic sampling temperatures. It is commented out by default.)*
 * **`DS4_CUDA_STREAM_FROM_RAM=1`**: Bypasses system call file reads and streams expert weights directly from the pinned RAM over PCIe.
 * **`DS4_CUDA_WEIGHT_ARENA_CHUNK_MB=256`**: Allocates weight memory in 256MB chunks to prevent VRAM fragmentation OOMs on 24GB cards.
 * **`DS4_CUDA_Q8_F16_CACHE_RESERVE_MB=512`**: Lowers the cache safety floor so intermediate weight allocations do not hit premature out-of-memory guards.
