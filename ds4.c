@@ -2490,8 +2490,29 @@ static void model_open(ds4_model *m, const char *path, bool metal_mapping,
     const int mmap_flags = MAP_SHARED;
     int prot = PROT_READ | (writeable ? PROT_WRITE : 0);
 #endif
-    void *map = mmap(NULL, (size_t)st.st_size, prot, mmap_flags, fd, 0);
-    if (map == MAP_FAILED) ds4_die_errno("cannot mmap model", path);
+    void *map;
+    if (getenv("DS4_ANON_MMAP")) {
+        fprintf(stderr, "ds4: using anonymous memory mapping (reading %zu bytes from disk)\n", (size_t)st.st_size);
+        map = mmap(NULL, (size_t)st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (map == MAP_FAILED) ds4_die_errno("cannot mmap anon memory", path);
+        
+        size_t bytes_read = 0;
+        while (bytes_read < (size_t)st.st_size) {
+            ssize_t r = read(fd, (char*)map + bytes_read, (size_t)st.st_size - bytes_read);
+            if (r < 0) {
+                if (errno == EINTR) continue;
+                ds4_die_errno("failed to read model into anon mmap", path);
+            }
+            if (r == 0) ds4_die("unexpected EOF while reading model into anon mmap");
+            bytes_read += r;
+        }
+        if (!writeable) {
+            mprotect(map, (size_t)st.st_size, PROT_READ);
+        }
+    } else {
+        map = mmap(NULL, (size_t)st.st_size, prot, mmap_flags, fd, 0);
+        if (map == MAP_FAILED) ds4_die_errno("cannot mmap model", path);
+    }
 
     m->fd = fd;
     m->map = map;

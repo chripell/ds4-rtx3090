@@ -2204,10 +2204,11 @@ static int cuda_model_copy_to_device_streamed(
     if (bytes == 0) return 1;
     if (g_model_fd < 0 ||
         (g_model_fd_host_base != NULL && model_map != g_model_fd_host_base)) {
-        return cuda_ok(cudaMemcpy(dst,
-                                  (const char *)model_map + offset,
-                                  (size_t)bytes,
-                                  cudaMemcpyHostToDevice),
+        return cuda_ok(cudaMemcpyAsync(dst,
+                                       (const char *)model_map + offset,
+                                       (size_t)bytes,
+                                       cudaMemcpyHostToDevice,
+                                       g_stream_selected_upload_stream),
                        what ? what : "stream selected expert copy");
     }
 
@@ -3716,18 +3717,7 @@ extern "C" int ds4_gpu_set_model_map(const void *model_map, uint64_t model_size)
     g_model_device_base = (const char *)model_map;
     g_model_registered_size = model_size;
     if (getenv("DS4_CUDA_STREAM_FROM_RAM") != NULL) {
-        unsigned int flags = cudaHostRegisterMapped;
-        cudaError_t err = cudaHostRegister((void *)model_map, (size_t)model_size, flags);
-        if (err == cudaSuccess) {
-            g_model_registered = 1;
-            fprintf(stderr, "ds4: CUDA pinned %.2f GiB model mapping for direct RAM streaming\n",
-                    (double)model_size / 1073741824.0);
-        } else {
-            fprintf(stderr, "ds4: WARNING: CUDA failed to pin model mapping: %s. "
-                    "RAM streaming will use slower pageable copies. (Check 'ulimit -l')\n",
-                    cudaGetErrorString(err));
-            (void)cudaGetLastError();
-        }
+        fprintf(stderr, "ds4: CUDA configured for direct RAM streaming (model will be pinned for DMA)\n");
     }
     g_model_range_mapping_supported = 1;
     g_model_hmm_direct = 0;

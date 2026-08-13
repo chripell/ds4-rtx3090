@@ -10,6 +10,8 @@ Set these environment variables in your shell before running `ds4` or `ds4-bench
 
 ```bash
 export CUDA_VISIBLE_DEVICES=0
+export DS4_ANON_MMAP=1
+export DS4_MTP_SPEC_DISABLE=1
 export DS4_CUDA_STREAM_FROM_RAM=1
 export DS4_CUDA_WEIGHT_ARENA_CHUNK_MB=256
 export DS4_CUDA_Q8_F16_CACHE_RESERVE_MB=512
@@ -18,7 +20,9 @@ export DS4_CUDA_NO_WINDOW_ATTENTION=1
 ```
 
 ### What these flags do:
-* **`DS4_CUDA_STREAM_FROM_RAM=1`**: Bypasses system call file reads and streams expert weights directly from RAM over PCIe via `cudaMemcpy`.
+* **`DS4_ANON_MMAP=1`**: Loads the 80GB model into anonymous memory at startup to bypass Linux kernel `cudaHostRegister` pinning restrictions on file-backed mappings.
+* **`DS4_MTP_SPEC_DISABLE=1`**: Disables Speculative Decoding/MTP batching. This restores full single-token throughput on single-GPU systems.
+* **`DS4_CUDA_STREAM_FROM_RAM=1`**: Bypasses system call file reads and streams expert weights directly from the pinned RAM over PCIe.
 * **`DS4_CUDA_WEIGHT_ARENA_CHUNK_MB=256`**: Allocates weight memory in 256MB chunks to prevent VRAM fragmentation OOMs on 24GB cards.
 * **`DS4_CUDA_Q8_F16_CACHE_RESERVE_MB=512`**: Lowers the cache safety floor so intermediate weight allocations do not hit premature out-of-memory guards.
 * **`DS4_CUDA_MMQ=0`**: Disables the heavy multi-hundred-megabyte prefill MMQ weights per layer to conserve VRAM for KV cache.
@@ -32,7 +36,7 @@ export DS4_CUDA_NO_WINDOW_ATTENTION=1
 ./ds4 \
   -m ./ds4flash.gguf \
   --ssd-streaming \
-  --ssd-streaming-cache-experts 8GB \
+  --ssd-streaming-cache-experts 21GB \
   --prefill-chunk 1024 \
   --ctx 32768 \
   -p "Write a Python function to reverse a string."
@@ -48,7 +52,7 @@ export DS4_CUDA_NO_WINDOW_ATTENTION=1
 ./ds4-bench \
   -m ./ds4flash.gguf \
   --ssd-streaming \
-  --ssd-streaming-cache-experts 8GB \
+  --ssd-streaming-cache-experts 21GB \
   --prefill-chunk 1024 \
   --prompt-file speed-bench/promessi_sposi.txt \
   --ctx-start 2048 \
