@@ -4,7 +4,18 @@ Optimized configuration for running **DeepSeek-V4-Flash** on a single **RTX 3090
 
 ---
 
-## 1. Environment Setup
+## 1. System Pre-checks
+
+Before running the engine, ensure your system allows pinning the memory required for direct PCIe streaming:
+
+* **Locked Memory Limit (`ulimit -l`)**: Must be set to `unlimited`. This is required so the CUDA driver can pin the 80GB mapped model in system RAM. 
+  * Check current limit: `ulimit -l`
+  * Set temporarily: `ulimit -l unlimited` (or edit `/etc/security/limits.conf` for persistence).
+* *(Note: Disabling the IOMMU via kernel parameters is generally not necessary as long as the memory is successfully pinned via anonymous mappings.)*
+
+---
+
+## 2. Environment Setup
 
 Set these environment variables in your shell before running `ds4` or `ds4-bench`:
 
