@@ -11,7 +11,7 @@ Before running the engine, ensure your system allows pinning the memory required
 * **Locked Memory Limit (`ulimit -l`)**: Must be set to `unlimited`. This is required so the CUDA driver can pin the 80GB mapped model in system RAM. 
   * Check current limit: `ulimit -l`
   * Set temporarily: `ulimit -l unlimited` (or edit `/etc/security/limits.conf` for persistence).
-* *(Note: Disabling the IOMMU via kernel parameters is generally not necessary as long as the memory is successfully pinned via anonymous mappings.)*
+* **IOMMU Settings**: Disabling the IOMMU via kernel parameters (e.g., `amd_iommu=off` or `intel_iommu=off`) is generally not necessary, as the `DS4_ANON_MMAP=1` flag bypasses the Linux kernel's file-backed memory pinning restrictions. **However**, if you still encounter the exact error `ds4: CUDA host registration skipped: operation not supported` despite setting `ulimit -l` and `DS4_ANON_MMAP=1`, you may try disabling IOMMU in your BIOS/bootloader as a last resort.
 
 ---
 
